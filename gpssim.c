@@ -12,6 +12,7 @@
 #else
 #include <unistd.h>
 #include <termios.h>
+#include <sys/wait.h>
 #include <fcntl.h>
 #endif
 
@@ -839,6 +840,19 @@ int readRinexNavAll(ephem_t eph[][MAX_SAT], ionoutc_t *ionoutc, const char *fnam
 	double dt;
 
 	int flags = 0x0;
+
+	pid_t pid = fork();
+	if(pid == 0) {
+		static char *argv2[] = {"convbin", "/home/syssec/usrpGPS/rinex/test.ubx"};
+		execv("/home/syssec/Downloads/rtklib-qt-rtklib_2.4.3_qt/app/convbin/gcc/convbin", argv2);
+		exit(127);
+	}
+	else
+	{
+		waitpid(pid, 0, 0);
+	}
+
+	printf("Generate RINEX file...\n");
 
 	if (NULL==(fp=fopen(fname, "rt")))
 		return(-1);
@@ -2500,6 +2514,28 @@ void *gps_task(void *arg)
 
 		if (igrx%300==0) // Every 30 seconds
 		{
+			if (igrx%7200==300)
+			//if (igrx%300==0)
+			{
+				neph = readRinexNavAll(eph, &ionoutc, navfile);
+				if(neph == 0)
+				{
+					printf("ERROR: No ephemeris available.\n");
+#ifndef BLADE_GPS
+					exit(1);
+#else
+					goto exit;
+#endif
+				}
+
+				for (i=0; i<MAX_CHAN; i++)
+					chan[i].prn = 0;
+
+				for (i=0; i<MAX_SAT; i++)
+					allocatedSat[i] = -1;
+
+				allocateChannel(chan, eph[ieph], ionoutc, grx, xyz[0], elvmask);
+			}
 			// Update navigation message
 			for (i=0; i<MAX_CHAN; i++)
 			{

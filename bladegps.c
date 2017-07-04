@@ -95,29 +95,14 @@ int is_fifo_write_ready(sim_t *s)
 	return(status);
 }
 
-void *sync_task(void *arg)
+/*void *rinex_task(void *arg)
 {
 	sim_t *s = (sim_t *)arg;
-	time_t full_secs = 2;
-	double frac_secs = 0;
 
-	while(1)
-	{
-		printf("flag : %d\n", flag);
-		if(flag == 1) {
-			//printf("flagflag\n");
-			
-			printf("sync\n");
-			//s->status = uhd_usrp_set_time_unknown_pps(s->tx.usrp, full_secs, 0);
-			//s->status = uhd_usrp_get_time_last_pps(s->tx.usrp, 0, &full, &frac);
-			//printf("\t%d, %f\n", full, frac);
 
-			full_secs = full_secs + 2;
-		}
-	}
 out:
 	return NULL;
-}
+}*/
 
 void *tx_task(void *arg)
 {
@@ -301,14 +286,14 @@ int start_gps_task(sim_t *s)
 	return(status);
 }
 
-int start_sync_task(sim_t *s)
+/*int start_rinex_task(sim_t *s)
 {
 	int status;
 
-	status = pthread_create(&(s->sync_thread), NULL, sync_task, s);
+	status = pthread_create(&(s->rinex_thread), NULL, rinex_task, s);
 
 	return(status);
-}
+}*/
 
 void usage(void)
 {
@@ -754,13 +739,13 @@ int main(int argc, char *argv[])
 		goto out;
 	}
 	
-	/*s.status = start_sync_task(&s);
+	/*s.status = start_rinex_task(&s);
 	if (s.status < 0) {
-		fprintf(stderr, "Failed to start Sync task.\n");
+		fprintf(stderr, "Failed to start RINEX task.\n");
 		goto out;
 	}
 	else
-		printf("Creating Sync task...\n");*/
+		printf("Creating RINEX task...\n");*/
 
 	// Start TX task
 	s.status = start_tx_task(&s);

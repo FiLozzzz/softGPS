@@ -90,7 +90,7 @@ typedef struct {
 
 	tx_t tx;
 	gps_t gps;
-	pthread_t sync_thread;
+	//pthread_t rinex_thread;
 
 	int status;
 	bool finished;
