@@ -102,6 +102,8 @@ double ant_pat_db[37] = {
 
 int allocatedSat[MAX_SAT];
 int cnt = 0;
+int period = 1;
+int shift = 0;
 
 /*! \brief Subtract two vectors of double
  *  \param[out] y Result of subtraction
@@ -843,7 +845,7 @@ int readRinexNavAll(ephem_t eph[][MAX_SAT], ionoutc_t *ionoutc, const char *fnam
 
 	pid_t pid = fork();
 	if(pid == 0) {
-		static char *argv2[] = {"convbin", "/home/syssec/usrpGPS/rinex/test.ubx"};
+		static char *argv2[] = {"convbin", "/home/syssec/usrpGPS/rinex/test.ubx", "-n", "/home/syssec/usrpGPS/rinex/test.nav"};
 		execv("/home/syssec/Downloads/rtklib-qt-rtklib_2.4.3_qt/app/convbin/gcc/convbin", argv2);
 		exit(127);
 	}
@@ -2278,6 +2280,9 @@ void *gps_task(void *arg)
 	tstart = clock();
 #endif
 
+	/*FILE *fp2;
+	double runtime;*/
+
 	// Update receiver time
 	grx = incGpsTime(grx, 0.1);
 
@@ -2306,8 +2311,12 @@ void *gps_task(void *arg)
 					key_direction = WEST;
 					break;
 				case 10:
-					cnt++;
-					printf("Shift\n");
+					/*fp2 = fopen("shift.txt", "r");
+					fscanf(fp2, "%d %d", &period, &shift);
+					fclose(fp2);
+					if(period == 0)
+						period = 1;
+					printf("Start shift (period = %ds, shift = %dns)\n", period, shift*100);*/
 				default:
 					break;
 				}
@@ -2589,12 +2598,15 @@ void *gps_task(void *arg)
 		}
 
 		// Update receiver time
-		//cnt++;
 		grx = incGpsTime(grx, 0.1);
+		//runtime = subGpsTime(grx, g0);
 
 		// Update time counter
 		printf("\rTime into run = %4.1f", subGpsTime(grx, g0));
 		fflush(stdout);
+	
+		/*if((int)(runtime * 10) % (period * 10) == 0)
+			cnt += shift;*/
 	}
 
 	// Done!
