@@ -102,8 +102,9 @@ double ant_pat_db[37] = {
 
 int allocatedSat[MAX_SAT];
 int cnt = 0;
-int period = 1;
+int period;
 int shift = 0;
+pid_t pid;
 
 /*! \brief Subtract two vectors of double
  *  \param[out] y Result of subtraction
@@ -843,18 +844,14 @@ int readRinexNavAll(ephem_t eph[][MAX_SAT], ionoutc_t *ionoutc, const char *fnam
 
 	int flags = 0x0;
 
-	pid_t pid = fork();
+	pid = fork();
 	if(pid == 0) {
-		static char *argv2[] = {"convbin", "/home/syssec/usrpGPS/rinex/test.ubx", "-n", "/home/syssec/usrpGPS/rinex/test.nav"};
-		execv("/home/syssec/Downloads/rtklib-qt-rtklib_2.4.3_qt/app/convbin/gcc/convbin", argv2);
+		static char *argv3[] = {"convbin", "-n", "/home/syssec/usrpGPS/rinex/test.nav", "/home/syssec/usrpGPS/rinex/test.ubx"};
+		execv("/home/syssec/Downloads/rtklib-qt-rtklib_2.4.3_qt/app/convbin/gcc/convbin", argv3);
 		exit(127);
 	}
 	else
-	{
 		waitpid(pid, 0, 0);
-	}
-
-	printf("Generate RINEX file...\n");
 
 	if (NULL==(fp=fopen(fname, "rt")))
 		return(-1);
@@ -2038,6 +2035,7 @@ void *gps_task(void *arg)
 	// Read ephemeris
 	////////////////////////////////////////////////////////////
 
+rinex:
 	neph = readRinexNavAll(eph, &ionoutc, navfile);
 
 	if (neph==0)
@@ -2155,7 +2153,7 @@ void *gps_task(void *arg)
 	t0.sec = tmp->tm_sec;
 
 	date2gps(&t0, &g0);
-	g0.sec += 3;
+	g0.sec += 21;
 	gps2date(&g0, &t0);
 
 	printf("Start time = %4d/%02d/%02d,%02d:%02d:%02.0f (%d:%.0f)\n", 
@@ -2172,7 +2170,8 @@ void *gps_task(void *arg)
 			if (eph[i][sv].vflg == 1)
 			{
 				dt = subGpsTime(g0, eph[i][sv].toc);
-				if (dt>=-2*SECONDS_IN_HOUR && dt<2*SECONDS_IN_HOUR)
+				if (dt>=-2*SECONDS_IN_HOUR && dt<300)
+				//if (dt>=-2*SECONDS_IN_HOUR)
 				{
 					ieph = i;
 					break;
@@ -2280,8 +2279,9 @@ void *gps_task(void *arg)
 	tstart = clock();
 #endif
 
-	/*FILE *fp2;
-	double runtime;*/
+	FILE *fp2;
+	double runtime;
+	period = 1;
 
 	// Update receiver time
 	grx = incGpsTime(grx, 0.1);
@@ -2523,9 +2523,17 @@ void *gps_task(void *arg)
 
 		if (igrx%300==0) // Every 30 seconds
 		{
-			if (igrx%7200==300)
-			//if (igrx%300==0)
-			{
+			if (igrx%3000 == 1800)
+			{	
+				/*pid = fork();
+				if(pid == 0) {
+					static char *argv3[] = {"convbin", "-n", "/home/syssec/usrpGPS/rinex/test.nav", "/home/syssec/usrpGPS/rinex/test.ubx"};
+					execv("/home/syssec/Downloads/rtklib-qt-rtklib_2.4.3_qt/app/convbin/gcc/convbin", argv3);
+					exit(127);
+				}
+				else
+					waitpid(pid, 0, 0);*/
+
 				neph = readRinexNavAll(eph, &ionoutc, navfile);
 				if(neph == 0)
 				{
@@ -2537,14 +2545,47 @@ void *gps_task(void *arg)
 #endif
 				}
 
+				ieph = -1;
+
+				for (i=0; i<neph; i++)
+				{
+					for (sv=0; sv<MAX_SAT; sv++)
+					{
+						if (eph[i][sv].vflg == 1)
+						{
+							dt = subGpsTime(grx, eph[i][sv].toc);
+							//if (dt>=-2*SECONDS_IN_HOUR && dt<2*SECONDS_IN_HOUR)
+							if (dt>=-2*SECONDS_IN_HOUR && dt<300)
+							{
+								ieph = i;
+								break;
+							}
+						}
+					}
+
+					if (ieph>=0) // ieph has been set
+						break;
+				}
+
+				if (ieph == -1)
+				{
+					printf("ERROR: No current set of ephemerides has been found.\n");
+#ifndef BLADE_GPS
+					exit(1);
+#else
+					goto exit;
+#endif
+				}
+				
 				for (i=0; i<MAX_CHAN; i++)
 					chan[i].prn = 0;
 
 				for (i=0; i<MAX_SAT; i++)
 					allocatedSat[i] = -1;
 
-				allocateChannel(chan, eph[ieph], ionoutc, grx, xyz[0], elvmask);
+				allocateChannel(chan, eph[ieph], ionoutc, grx, xyz[iumd], elvmask);
 			}
+	
 			// Update navigation message
 			for (i=0; i<MAX_CHAN; i++)
 			{
@@ -2599,14 +2640,14 @@ void *gps_task(void *arg)
 
 		// Update receiver time
 		grx = incGpsTime(grx, 0.1);
-		//runtime = subGpsTime(grx, g0);
+		runtime = subGpsTime(grx, g0);
 
 		// Update time counter
-		printf("\rTime into run = %4.1f", subGpsTime(grx, g0));
+		printf("\rTime into run = %4.1f ", subGpsTime(grx, g0));
 		fflush(stdout);
 	
-		/*if((int)(runtime * 10) % (period * 10) == 0)
-			cnt += shift;*/
+		if((int)(runtime * 10) % (period * 10) == 0)
+			cnt += shift;
 	}
 
 	// Done!
