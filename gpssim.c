@@ -14,6 +14,9 @@
 #include <termios.h>
 #include <sys/wait.h>
 #include <fcntl.h>
+#include <stdlib.h>
+#include <sys/ipc.h>
+#include <sys/shm.h>
 #endif
 
 #include "gpssim.h"
@@ -100,11 +103,8 @@ double ant_pat_db[37] = {
 	31.56
 };
 
-int allocatedSat[MAX_SAT];
 int cnt = 0;
-int period;
-int shift = 0;
-pid_t pid;
+int allocatedSat[MAX_SAT];
 
 /*! \brief Subtract two vectors of double
  *  \param[out] y Result of subtraction
@@ -844,7 +844,7 @@ int readRinexNavAll(ephem_t eph[][MAX_SAT], ionoutc_t *ionoutc, const char *fnam
 
 	int flags = 0x0;
 
-	pid = fork();
+	pid_t pid = fork();
 	if(pid == 0) {
 		static char *argv3[] = {"convbin", "-n", "/home/syssec/usrpGPS/rinex/test.nav", "/home/syssec/usrpGPS/rinex/test.ubx"};
 		execv("/home/syssec/Downloads/rtklib-qt-rtklib_2.4.3_qt/app/convbin/gcc/convbin", argv3);
@@ -1296,7 +1296,7 @@ void computeRange(range_t *rho, ephem_t eph, ionoutc_t *ionoutc, gpstime_t g, do
 
 	// Pseudorange.
 	//rho->range = range - SPEED_OF_LIGHT*clk[0];
-	rho->range = range - SPEED_OF_LIGHT*clk[0] - SPEED_OF_LIGHT * 1e-9 * 18187290 - SPEED_OF_LIGHT * 1e-9 * 100 * cnt;
+	rho->range = range - SPEED_OF_LIGHT*clk[0] - SPEED_OF_LIGHT * 1e-9 * 18187290 + SPEED_OF_LIGHT * 1e-9 * cnt;
 
 	// Relative velocity of SV and receiver.
 	rate = dotProd(vel, los)/range;
@@ -1788,6 +1788,8 @@ void *gps_task(void *arg)
 	double tmat[3][3];
 	double neu[3];
 #endif
+	void *shm_addr;
+	key_t shm_id;
 
 	////////////////////////////////////////////////////////////
 	// Read options
@@ -1904,6 +1906,21 @@ void *gps_task(void *arg)
 
 	delt = 1.0/samp_freq;
 #else
+	
+	if((shm_id = shmget((key_t)8081, sizeof(int)*5, IPC_CREAT|0666)) == -1)
+	{
+		printf("shared memory allocation fails\n");
+		goto exit;
+	}
+
+	if((shm_addr = shmat(shm_id, (void *)0, 0)) == (void *)-1)
+	{
+		printf("shared memory attachment fails\n");
+		goto exit;
+	}
+
+	((int *)shm_addr)[4] = 0;
+
 	strcpy(navfile, s->opt.navfile);
 	strcpy(umfile, s->opt.umfile);
 	data_format = SC16;
@@ -2281,7 +2298,6 @@ rinex:
 
 	FILE *fp2;
 	double runtime;
-	period = 1;
 
 	// Update receiver time
 	grx = incGpsTime(grx, 0.1);
@@ -2525,15 +2541,6 @@ rinex:
 		{
 			if (igrx%3000 == 1800)
 			{	
-				/*pid = fork();
-				if(pid == 0) {
-					static char *argv3[] = {"convbin", "-n", "/home/syssec/usrpGPS/rinex/test.nav", "/home/syssec/usrpGPS/rinex/test.ubx"};
-					execv("/home/syssec/Downloads/rtklib-qt-rtklib_2.4.3_qt/app/convbin/gcc/convbin", argv3);
-					exit(127);
-				}
-				else
-					waitpid(pid, 0, 0);*/
-
 				neph = readRinexNavAll(eph, &ionoutc, navfile);
 				if(neph == 0)
 				{
@@ -2646,9 +2653,20 @@ rinex:
 		printf("\rTime into run = %4.1f ", subGpsTime(grx, g0));
 		fflush(stdout);
 	
-		if((int)(runtime * 10) % (period * 10) == 0)
-			cnt += shift;
+		if((int)(runtime * 10) % (((int *)shm_addr)[1] * 10) == 0 && ((int *)shm_addr)[0] == 1)
+			if(abs(cnt) < ((int *)shm_addr)[3])
+			{	
+				cnt += ((int *)shm_addr)[2];
+				((int *)shm_addr)[4] = cnt;
+			}
+		else if(((int *)shm_addr)[0] == 0)
+		{
+			cnt = 0;
+			((int *)shm_addr)[4] = 0;
+		}
 	}
+	
+	shmdt(shm_addr);
 
 	// Done!
 	s->finished = true;

@@ -1,7 +1,7 @@
 # Makefile for Linux etc.
 
 .PHONY: all clean
-all: bladegps
+all: bladegps interface
 
 SHELL=/bin/bash
 CC=gcc
@@ -11,5 +11,8 @@ LDFLAGS=-lm -lpthread -L../bladeRF/host/build/output -lbladeRF -luhd
 bladegps: bladegps.o gpssim.o getch.o
 	${CC} $^ ${LDFLAGS} -o $@
 
+interface: interface.o
+	${CC} $^ -o $@
+
 clean:
-	rm -f *.o bladegps
+	rm -f *.o bladegps interface
