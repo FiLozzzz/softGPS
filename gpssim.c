@@ -844,15 +844,6 @@ int readRinexNavAll(ephem_t eph[][MAX_SAT], ionoutc_t *ionoutc, const char *fnam
 
 	int flags = 0x0;
 
-	pid_t pid = fork();
-	if(pid == 0) {
-		static char *argv3[] = {"convbin", "-n", "/home/syssec/usrpGPS/rinex/test.nav", "/home/syssec/usrpGPS/rinex/test.ubx"};
-		execv("/home/syssec/Downloads/rtklib-qt-rtklib_2.4.3_qt/app/convbin/gcc/convbin", argv3);
-		exit(127);
-	}
-	else
-		waitpid(pid, 0, 0);
-
 	if (NULL==(fp=fopen(fname, "rt")))
 		return(-1);
 
@@ -2653,12 +2644,19 @@ rinex:
 		printf("\rTime into run = %4.1f ", subGpsTime(grx, g0));
 		fflush(stdout);
 	
-		if((int)(runtime * 10) % (((int *)shm_addr)[1] * 10) == 0 && ((int *)shm_addr)[0] == 1)
-			if(abs(cnt) < ((int *)shm_addr)[3])
+		if((int)(runtime * 100) % (((int *)shm_addr)[1] * 100) == 0 && ((int *)shm_addr)[0] == 1)
+		{
+			if(((int *)shm_addr)[3] == 0 && cnt != 0)
+			{
+				cnt += (abs(((int *)shm_addr)[2]) * ((cnt >= 0) ? -1 : 1));
+				((int *)shm_addr)[4] = cnt;
+			}
+			else if(abs(cnt) < ((int *)shm_addr)[3] || abs(cnt + ((int *)shm_addr)[2]) <= ((int *)shm_addr)[3])
 			{	
 				cnt += ((int *)shm_addr)[2];
 				((int *)shm_addr)[4] = cnt;
-			}
+			}	
+		}
 		else if(((int *)shm_addr)[0] == 0)
 		{
 			cnt = 0;

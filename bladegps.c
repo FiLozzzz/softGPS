@@ -624,7 +624,7 @@ int main(int argc, char *argv[])
 		printf("TX VGA2 gain: %d dB\n", TX_VGA2);
 	}*/
 
-	double gain = 11;
+	double gain = 15;
 
 	s.status = uhd_usrp_set_tx_gain(s.tx.usrp, gain, 0, "");
 

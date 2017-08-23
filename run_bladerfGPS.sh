@@ -17,4 +17,7 @@ day=`date -u +%j`
 #fi
 
 #./bladegps -e $brdc_file_year -t `date -u +'%Y/%m/%d,%H:%M:%S'` $* -i
-./bladegps -t `date -u +'%Y/%m/%d,%H:%M:%S'` $* -i -l 36.375024,127.361600,100
+./bladegps -t `date -u +'%Y/%m/%d,%H:%M:%S'` $* -i -l 36.375024,127.361600,50
+#./bladegps -t `date -u +'%Y/%m/%d,%H:%M:%S'` $* -i -l 36.372814,127.360602,20 #futsal R
+#./bladegps -t `date -u +'%Y/%m/%d,%H:%M:%S'` $* -i -l 36.372811,127.359878,20 #futsal L
+#./bladegps -t `date -u +'%Y/%m/%d,%H:%M:%S'` $* -i -l 35.453611,126.447222,20

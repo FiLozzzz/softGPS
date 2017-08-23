@@ -7,11 +7,83 @@
 #include <fcntl.h>
 #include <stdlib.h>
 
-pid_t pid, pid2;
+pid_t pid, pid2, pid3;
+void *shm_addr;//state, period, shift, shift_max;
 
 void clearScreen()
 {
 	printf("\e[1;1H\e[2J");
+}
+
+void automation()
+{
+	time_t curr_time, start, diff;
+	pid3 = fork();
+	if(pid3 == 0)
+	{
+		start = time(NULL);
+		while(1)
+		{
+			curr_time = time(NULL);
+			diff = curr_time - start;
+			if(diff == 3600)
+			{
+				((int *)shm_addr)[0] = 1;	
+				((int *)shm_addr)[1] = 1;	
+				((int *)shm_addr)[2] = -10;	
+				((int *)shm_addr)[3] = 30000;	
+			}
+			else if(diff == 7200)
+			{
+				((int *)shm_addr)[0] = 1;	
+				((int *)shm_addr)[1] = 1;	
+				((int *)shm_addr)[2] = 10;	
+				((int *)shm_addr)[3] = 0;	
+			}
+			else if(diff == 10800)
+			{
+				((int *)shm_addr)[0] = 1;	
+				((int *)shm_addr)[1] = 1;	
+				((int *)shm_addr)[2] = 10;	
+				((int *)shm_addr)[3] = 30000;	
+			}
+			else if(diff == 14400)
+			{
+				((int *)shm_addr)[0] = 1;	
+				((int *)shm_addr)[1] = 1;	
+				((int *)shm_addr)[2] = -10;	
+				((int *)shm_addr)[3] = 0;	
+			}
+			/*if(diff == 60)
+			{
+				((int *)shm_addr)[0] = 1;	
+				((int *)shm_addr)[1] = 1;	
+				((int *)shm_addr)[2] = -10;	
+				((int *)shm_addr)[3] = 2000;	
+			}
+			else if(diff == 360)
+			{
+				((int *)shm_addr)[0] = 1;	
+				((int *)shm_addr)[1] = 1;	
+				((int *)shm_addr)[2] = 10;	
+				((int *)shm_addr)[3] = 0;	
+			}
+			else if(diff == 660)
+			{
+				((int *)shm_addr)[0] = 1;	
+				((int *)shm_addr)[1] = 1;	
+				((int *)shm_addr)[2] = 10;	
+				((int *)shm_addr)[3] = 2000;	
+			}
+			else if(diff == 960)
+			{
+				((int *)shm_addr)[0] = 1;	
+				((int *)shm_addr)[1] = 1;	
+				((int *)shm_addr)[2] = -10;	
+				((int *)shm_addr)[3] = 0;	
+			}*/
+		}
+	}
 }
 
 void start_str2str()
@@ -33,11 +105,11 @@ void str2str()
 	pid = fork();
 	if(pid == 0)
 	{
-		int fd = open("log.txt", O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
+		//int fd = open("log.txt", O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
 
-		dup2(fd, 1);
-		dup2(fd, 2);
-		execl("/home/syssec/Downloads/rtklib-qt-rtklib_2.4.3_qt/app/str2str/gcc/str2str", "str2str", "-c", "/home/syssec/usrpGPS/commands.txt", "-in", "file:///dev/ttyACM0#ubx", "-out", "file:///home/syssec/usrpGPS/rinex/test.ubx", (char *) 0);
+		//dup2(fd, 1);
+		//dup2(fd, 2);
+		execl("/home/syssec/Downloads/rtklib/app/str2str/gcc/str2str", "str2str", "-c", "/home/syssec/usrpGPS/commands.txt", "-in", "file:///dev/ttyACM0#ubx", "-out", "file:///home/syssec/usrpGPS/rinex/test.ubx", (char *) 0);
 		exit(127);
 	}
 	else
@@ -45,6 +117,16 @@ void str2str()
 		sleep(120);
 		kill(pid, SIGINT);
 		kill(pid, SIGKILL);
+		
+		pid = fork();
+		
+		if(pid == 0) {
+			static char *argv3[] = {"convbin", "-n", "/home/syssec/usrpGPS/rinex/test.nav", "/home/syssec/usrpGPS/rinex/test.ubx"};
+			execv("/home/syssec/Downloads/rtklib/app/convbin/gcc/convbin", argv3);
+			exit(127);
+			}
+		else
+			waitpid(pid, 0, 0);		
 	}
 }
 
@@ -55,7 +137,7 @@ int main(void)
 	uid_t uid;
 	key_t shm_id;
 
-	void *shm_addr;//state, period, shift, shift_max;
+	//void *shm_addr;//state, period, shift, shift_max;
 
 	uid = getuid();
 	if(uid != 0)
@@ -93,7 +175,7 @@ int main(void)
 	while(1) {
 		printf("\n");
 		printf("1. Start GPS Spoofer\n");
-		printf("2. Generate UBX file (Duration: 2min)\n");
+		printf("2. Generate RINEX file (Duration: 2min)\n");
 		printf("3. Time shift configuration\n");
 		printf("4. Start time shift\n");
 		printf("5. Pause time shift\n");
@@ -112,7 +194,9 @@ int main(void)
 				if(pid2 == 0)
 					start_str2str();
 				else
+				{
 					system("gnome-terminal -x sh -c \"sudo ./run_bladerfGPS.sh -e rinex/test.nav; bash\"");
+				}
 				break;
 			case 2:
 				printf("Generate UBX file...\n");
@@ -121,16 +205,19 @@ int main(void)
 			case 3:
 				printf("Period(s), shift step(ns), max abs shift(ns)\n");
 				scanf("%d, %d, %d", &((int *)shm_addr)[1], &((int *)shm_addr)[2], &((int *)shm_addr)[3]);
+				((int *)shm_addr)[3] = abs(((int *)shm_addr)[3]);
 				printf("%d, %d, %d\n", ((int *)shm_addr)[1], ((int *)shm_addr)[2], ((int *)shm_addr)[3]);
 				break;
 			case 4:
 				((int *)shm_addr)[0] = 1;
+				//automation();
 				break;
 			case 5:
 				((int *)shm_addr)[0] = 2;
 				break;
 			case 6:
 				((int *)shm_addr)[0] = 0;
+				((int *)shm_addr)[4] = 0;
 				break;
 			case 7:
 				printf("Status : %d\n", ((int *)shm_addr)[0]);
