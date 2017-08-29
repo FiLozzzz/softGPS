@@ -105,24 +105,24 @@ void str2str()
 	pid = fork();
 	if(pid == 0)
 	{
-		//int fd = open("log.txt", O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
-
-		//dup2(fd, 1);
-		//dup2(fd, 2);
-		execl("/home/syssec/Downloads/rtklib/app/str2str/gcc/str2str", "str2str", "-c", "/home/syssec/usrpGPS/commands.txt", "-in", "file:///dev/ttyACM0#ubx", "-out", "file:///home/syssec/usrpGPS/rinex/test.ubx", (char *) 0);
+		int fd = open("log.txt", O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
+		static char *argv2[] = {"/usr/local/bin/str2str", "str2str", "-c", "commands.txt", "-in", "serial://ttyACM0:9600:8:n:1:off", "-out", "test.ubx"};
+		dup2(fd, 1);
+		dup2(fd, 2);
+		execv("/usr/bin/sudo", argv2);
 		exit(127);
 	}
 	else
 	{
 		sleep(120);
 		kill(pid, SIGINT);
-		kill(pid, SIGKILL);
+		kill(pid, SIGINT);
 		
 		pid = fork();
 		
 		if(pid == 0) {
-			static char *argv3[] = {"convbin", "-n", "/home/syssec/usrpGPS/rinex/test.nav", "/home/syssec/usrpGPS/rinex/test.ubx"};
-			execv("/home/syssec/Downloads/rtklib/app/convbin/gcc/convbin", argv3);
+			static char *argv3[] = {"/usr/local/bin/convbin", "convbin", "-n", "test.nav", "test.ubx"};
+			execv("/usr/bin/sudo", argv3);
 			exit(127);
 			}
 		else
@@ -172,6 +172,8 @@ int main(void)
 	((int *)shm_addr)[2] = 0;
 	((int *)shm_addr)[3] = 0;
 
+	//system("gnome-terminal -x sh -c \"sudo str2str -c commands.txt -in serial://ttyACM0 -out tcpsvr://:8887 ; bash\"");
+
 	while(1) {
 		printf("\n");
 		printf("1. Start GPS Spoofer\n");
@@ -195,11 +197,11 @@ int main(void)
 					start_str2str();
 				else
 				{
-					system("gnome-terminal -x sh -c \"sudo ./run_bladerfGPS.sh -e rinex/test.nav; bash\"");
+					system("gnome-terminal -x sh -c \"sudo ./run_bladerfGPS.sh -e test.nav ; bash\"");
 				}
 				break;
 			case 2:
-				printf("Generate UBX file...\n");
+				printf("Generate RINEX file...\n");
 				str2str();
 				break;
 			case 3:

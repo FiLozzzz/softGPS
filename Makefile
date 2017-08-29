@@ -5,8 +5,8 @@ all: bladegps interface
 
 SHELL=/bin/bash
 CC=gcc
-CFLAGS=-O3 -Wall -I../bladeRF/host/libraries/libbladeRF/include
-LDFLAGS=-lm -lpthread -L../bladeRF/host/build/output -lbladeRF -luhd
+CFLAGS=-O3 -Wall 
+LDFLAGS=-lm -lpthread -luhd
 
 bladegps: bladegps.o gpssim.o getch.o
 	${CC} $^ ${LDFLAGS} -o $@

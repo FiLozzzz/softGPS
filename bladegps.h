@@ -5,7 +5,6 @@
 #include <uhd.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <libbladeRF.h>
 #include <string.h>
 #include <time.h>
 #ifdef _WIN32
