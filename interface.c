@@ -90,13 +90,17 @@ void start_str2str()
 {
 	struct tm *tmp;
 	time_t curr_time;
+	int min = -1;
 
 	while(1)
 	{
 		curr_time = time(NULL);
 		tmp = gmtime(&curr_time);
-		if(tmp->tm_min % 5 == 0 && tmp->tm_sec == 0)
+		if(tmp->tm_min % 5 == 0 && tmp->tm_sec <= 2 && min != tmp->tm_min)
+		{
+			min = tmp->tm_min;
 			str2str();
+		}
 	}
 }
 
@@ -105,11 +109,11 @@ void str2str()
 	pid = fork();
 	if(pid == 0)
 	{
-		int fd = open("log.txt", O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
-		static char *argv2[] = {"/usr/local/bin/str2str", "str2str", "-c", "commands.txt", "-in", "serial://ttyACM0:9600:8:n:1:off", "-out", "test.ubx"};
-		dup2(fd, 1);
-		dup2(fd, 2);
-		execv("/usr/bin/sudo", argv2);
+		//int fd = open("log.txt", O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
+		static char *argv2[] = {"str2str", "-c", "commands.txt", "-in", "serial://ttyACM1:9600:8:n:1:off", "-out", "test.ubx"};
+		//dup2(fd, 1);
+		//dup2(fd, 2);
+		execv("/usr/local/bin/str2str", argv2);
 		exit(127);
 	}
 	else
@@ -117,14 +121,15 @@ void str2str()
 		sleep(120);
 		kill(pid, SIGINT);
 		kill(pid, SIGINT);
+		kill(pid, SIGKILL);
 		
 		pid = fork();
 		
 		if(pid == 0) {
-			static char *argv3[] = {"/usr/local/bin/convbin", "convbin", "-n", "test.nav", "test.ubx"};
-			execv("/usr/bin/sudo", argv3);
+			static char *argv3[] = {"convbin", "test.ubx"};
+			execv("/usr/local/bin/convbin", argv3);
 			exit(127);
-			}
+		}
 		else
 			waitpid(pid, 0, 0);		
 	}
