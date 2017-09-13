@@ -7,7 +7,7 @@
 #include <fcntl.h>
 #include <stdlib.h>
 
-pid_t pid, pid2, pid3;
+pid_t pid, pid2, pid3, pid4, ppid;
 void *shm_addr;//state, period, shift, shift_max;
 
 void clearScreen()
@@ -24,64 +24,37 @@ void automation()
 		start = time(NULL);
 		while(1)
 		{
+			sleep(1);
 			curr_time = time(NULL);
 			diff = curr_time - start;
-			if(diff == 3600)
+			if(diff >= 0 && diff < 3600)
 			{
 				((int *)shm_addr)[0] = 1;	
 				((int *)shm_addr)[1] = 1;	
-				((int *)shm_addr)[2] = -10;	
-				((int *)shm_addr)[3] = 30000;	
+				((int *)shm_addr)[2] = -1;	
+				((int *)shm_addr)[3] = 3600;	
 			}
-			else if(diff == 7200)
+			else if(diff >= 7200 && diff < 10800)
 			{
 				((int *)shm_addr)[0] = 1;	
 				((int *)shm_addr)[1] = 1;	
-				((int *)shm_addr)[2] = 10;	
+				((int *)shm_addr)[2] = 1;	
 				((int *)shm_addr)[3] = 0;	
 			}
-			else if(diff == 10800)
+			else if(diff >= 14400 && diff < 18000)
 			{
 				((int *)shm_addr)[0] = 1;	
 				((int *)shm_addr)[1] = 1;	
-				((int *)shm_addr)[2] = 10;	
-				((int *)shm_addr)[3] = 30000;	
+				((int *)shm_addr)[2] = 1;	
+				((int *)shm_addr)[3] = 3600;	
 			}
-			else if(diff == 14400)
+			else if(diff >= 21600 && diff < 25200)
 			{
 				((int *)shm_addr)[0] = 1;	
 				((int *)shm_addr)[1] = 1;	
-				((int *)shm_addr)[2] = -10;	
+				((int *)shm_addr)[2] = -1;	
 				((int *)shm_addr)[3] = 0;	
 			}
-			/*if(diff == 60)
-			{
-				((int *)shm_addr)[0] = 1;	
-				((int *)shm_addr)[1] = 1;	
-				((int *)shm_addr)[2] = -10;	
-				((int *)shm_addr)[3] = 2000;	
-			}
-			else if(diff == 360)
-			{
-				((int *)shm_addr)[0] = 1;	
-				((int *)shm_addr)[1] = 1;	
-				((int *)shm_addr)[2] = 10;	
-				((int *)shm_addr)[3] = 0;	
-			}
-			else if(diff == 660)
-			{
-				((int *)shm_addr)[0] = 1;	
-				((int *)shm_addr)[1] = 1;	
-				((int *)shm_addr)[2] = 10;	
-				((int *)shm_addr)[3] = 2000;	
-			}
-			else if(diff == 960)
-			{
-				((int *)shm_addr)[0] = 1;	
-				((int *)shm_addr)[1] = 1;	
-				((int *)shm_addr)[2] = -10;	
-				((int *)shm_addr)[3] = 0;	
-			}*/
 		}
 	}
 }
@@ -94,9 +67,11 @@ void start_str2str()
 
 	while(1)
 	{
+		sleep(5);
 		curr_time = time(NULL);
 		tmp = gmtime(&curr_time);
-		if(tmp->tm_min % 5 == 0 && tmp->tm_sec <= 2 && min != tmp->tm_min)
+		if(tmp->tm_min % 5 == 0 && tmp->tm_sec <= 20 && min != tmp->tm_min)
+		//if(tmp->tm_min % 5 == 0 && tmp->tm_sec == 0)
 		{
 			min = tmp->tm_min;
 			str2str();
@@ -110,7 +85,7 @@ void str2str()
 	if(pid == 0)
 	{
 		//int fd = open("log.txt", O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
-		static char *argv2[] = {"str2str", "-c", "commands.txt", "-in", "serial://ttyACM1:9600:8:n:1:off", "-out", "test.ubx"};
+		static char *argv2[] = {"str2str", "-c", "commands.txt", "-in", "serial://ttyACM0:9600:8:n:1:off", "-out", "test.ubx"};
 		//dup2(fd, 1);
 		//dup2(fd, 2);
 		execv("/usr/local/bin/str2str", argv2);
@@ -118,7 +93,7 @@ void str2str()
 	}
 	else
 	{
-		sleep(120);
+		sleep(90);
 		kill(pid, SIGINT);
 		kill(pid, SIGINT);
 		kill(pid, SIGKILL);
@@ -217,7 +192,7 @@ int main(void)
 				break;
 			case 4:
 				((int *)shm_addr)[0] = 1;
-				//automation();
+				automation();
 				break;
 			case 5:
 				((int *)shm_addr)[0] = 2;

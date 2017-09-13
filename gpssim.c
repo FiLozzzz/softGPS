@@ -1571,7 +1571,7 @@ int checkSatVisibility(ephem_t eph, gpstime_t g, double *xyz, double elvMask, do
 	if (azel[1]*R2D > elvMask)
 		return (1); // Visible
 	// else
-	return (0); // Invisible
+	return (1); // Invisible
 }
 
 int allocateChannel(channel_t *chan, ephem_t *eph, ionoutc_t ionoutc, gpstime_t grx, double *xyz, double elvMask)
@@ -2639,6 +2639,9 @@ rinex:
 		// Update receiver time
 		grx = incGpsTime(grx, 0.1);
 		runtime = subGpsTime(grx, g0);
+
+		if(runtime >= 28800)
+			exit(1);
 
 		// Update time counter
 		printf("\rTime into run = %4.1f ", subGpsTime(grx, g0));
