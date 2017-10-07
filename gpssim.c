@@ -847,6 +847,8 @@ int readRinexNavAll(ephem_t eph[][MAX_SAT], ionoutc_t *ionoutc, const char *fnam
 	if (NULL==(fp=fopen(fname, "rt")))
 		return(-1);
 
+	printf("read RINEX\n");
+
 	// Clear valid flag
 	for (ieph=0; ieph<EPHEM_ARRAY_SIZE; ieph++)
 		for (sv=0; sv<MAX_SAT; sv++)
@@ -1571,7 +1573,7 @@ int checkSatVisibility(ephem_t eph, gpstime_t g, double *xyz, double elvMask, do
 	if (azel[1]*R2D > elvMask)
 		return (1); // Visible
 	// else
-	return (1); // Invisible
+	return (0); // Invisible
 }
 
 int allocateChannel(channel_t *chan, ephem_t *eph, ionoutc_t ionoutc, gpstime_t grx, double *xyz, double elvMask)
@@ -2324,6 +2326,14 @@ rinex:
 					if(period == 0)
 						period = 1;
 					printf("Start shift (period = %ds, shift = %dns)\n", period, shift*100);*/
+					break;
+				case '8':
+				case '4':
+				case '5':
+				case '6':
+				case '2':
+					key_direction = UP;
+					break;
 				default:
 					break;
 				}
@@ -2376,6 +2386,30 @@ rinex:
 				xyz[iumd][0] += tmat[0][0]*neu[0] + tmat[1][0]*neu[1] + tmat[2][0]*neu[2];
 				xyz[iumd][1] += tmat[0][1]*neu[0] + tmat[1][1]*neu[1] + tmat[2][1]*neu[2];
 				xyz[iumd][2] += tmat[0][2]*neu[0] + tmat[1][2]*neu[1] + tmat[2][2]*neu[2];
+			}
+
+			if(direction == UP)
+			{
+				llh[0] = s->opt.llh[0];
+				llh[1] = s->opt.llh[1];
+				llh[2] = s->opt.llh[2];
+
+				switch(key)
+				{
+				case '8':
+					llh[0] += 0.0002;
+					break;
+				case '4':
+					llh[1] -= 0.0002;
+					break;
+				case '6':
+					llh[1] += 0.0002;
+					break;
+				case '2':
+					llh[0] -= 0.0002;
+					break;
+				}
+				llh2xyz(llh, xyz[iumd]);
 			}
 		}
 #endif
@@ -2463,8 +2497,8 @@ rinex:
 			}
 
 			// Store I/Q samples into buffer
-			iq_buff[isamp*2] = (short)i_acc*8;
-			iq_buff[isamp*2+1] = (short)q_acc*8;
+			iq_buff[isamp*2] = (short)i_acc*32;
+			iq_buff[isamp*2+1] = (short)q_acc*32;
 
 		} // End of omp parallel for
 
@@ -2530,7 +2564,7 @@ rinex:
 
 		if (igrx%300==0) // Every 30 seconds
 		{
-			if (igrx%3000 == 1800)
+			if (igrx%72000 == 1800)
 			{	
 				neph = readRinexNavAll(eph, &ionoutc, navfile);
 				if(neph == 0)

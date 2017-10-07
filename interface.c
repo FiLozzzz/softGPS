@@ -18,11 +18,40 @@ void clearScreen()
 void automation()
 {
 	time_t curr_time, start, diff;
+	int i, n;
+	int sce[100][4];
+	FILE *fp;
+
 	pid3 = fork();
 	if(pid3 == 0)
 	{
 		start = time(NULL);
+		fp = fopen("automation.txt", "r");
+		if(fp == NULL)
+			return;
+		fscanf(fp,"%d",&n);
+		for(i=0; i<n; i++)
+			fscanf(fp,"%d %d %d %d",&sce[i][0], &sce[i][1], &sce[i][2], &sce[i][3]);
+		fclose(fp);
+
+		i = 0;
 		while(1)
+		{
+			sleep(1);
+			curr_time = time(NULL);
+			diff = curr_time - start;
+			if(diff >= sce[i][0])
+			{
+				((int *)shm_addr)[0] = 1;
+				((int *)shm_addr)[1] = sce[i][1];
+				((int *)shm_addr)[2] = sce[i][2];
+				((int *)shm_addr)[3] = sce[i][3];
+				
+				if(i+1 < n)
+					i++;
+			}
+		}
+		/*while(1)
 		{
 			sleep(1);
 			curr_time = time(NULL);
@@ -55,7 +84,7 @@ void automation()
 				((int *)shm_addr)[2] = -1;	
 				((int *)shm_addr)[3] = 0;	
 			}
-		}
+		}*/
 	}
 }
 
@@ -67,13 +96,15 @@ void start_str2str()
 
 	while(1)
 	{
-		sleep(5);
+		sleep(60);
 		curr_time = time(NULL);
 		tmp = gmtime(&curr_time);
-		if(tmp->tm_min % 5 == 0 && tmp->tm_sec <= 20 && min != tmp->tm_min)
+		//if(0)
+		//if(tmp->tm_min % 5 == 0 && tmp->tm_sec <= 20 && min != tmp->tm_min)
 		//if(tmp->tm_min % 5 == 0 && tmp->tm_sec == 0)
+		if(tmp->tm_hour % 2 == 0 && tmp->tm_min == 0)
 		{
-			min = tmp->tm_min;
+			//min = tmp->tm_min;
 			str2str();
 		}
 	}
@@ -93,7 +124,7 @@ void str2str()
 	}
 	else
 	{
-		sleep(90);
+		sleep(120);
 		kill(pid, SIGINT);
 		kill(pid, SIGINT);
 		kill(pid, SIGKILL);
@@ -126,14 +157,14 @@ int main(void)
 		exit(0);
 	}
 
-	fp = fopen("rinex/test.ubx", "r");
+	/*fp = fopen("rinex/test.ubx", "r");
 	if(fp == NULL)
 	{
 		printf("Generate UBX file...\n");
 		str2str();
 	}
 	else
-		fclose(fp);
+		fclose(fp);*/
 	
 	if((shm_id = shmget((key_t)8081, sizeof(int)*5, IPC_CREAT|0666)) == -1)
 	{
