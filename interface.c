@@ -30,6 +30,10 @@ void automation()
 		if(fp == NULL)
 			return;
 		fscanf(fp,"%d",&n);
+
+		if(n == 0)
+			exit(1);
+
 		for(i=0; i<n; i++)
 			fscanf(fp,"%d %d %d %d",&sce[i][0], &sce[i][1], &sce[i][2], &sce[i][3]);
 		fclose(fp);

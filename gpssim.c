@@ -2390,23 +2390,28 @@ rinex:
 
 			if(direction == UP)
 			{
-				llh[0] = s->opt.llh[0];
-				llh[1] = s->opt.llh[1];
-				llh[2] = s->opt.llh[2];
-
+				//xyz2llh(xyz[iumd], llh);
+				xyz2llh(xyz[0], llh);
+				//float dist = 0.00001;
+				float dist = 0.0002;
 				switch(key)
 				{
 				case '8':
-					llh[0] += 0.0002;
+					llh[0] += dist;
 					break;
 				case '4':
-					llh[1] -= 0.0002;
+					llh[1] -= dist;
 					break;
 				case '6':
-					llh[1] += 0.0002;
+					llh[1] += dist;
 					break;
 				case '2':
-					llh[0] -= 0.0002;
+					llh[0] -= dist;
+					break;
+				case '5':
+					llh[0] = s->opt.llh[0];
+					llh[1] = s->opt.llh[1];
+					llh[2] = s->opt.llh[2];
 					break;
 				}
 				llh2xyz(llh, xyz[iumd]);
