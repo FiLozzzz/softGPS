@@ -167,7 +167,7 @@ void *tx_task(void *arg)
 			tx_buffer_current += (2 * samples_populated);
 		}
 
-		/*if(!flag)
+		if(!flag)
 		{
 			uhd_sensor_value_handle gpstime;
 			//int gps_time;
@@ -182,7 +182,7 @@ void *tx_task(void *arg)
 			full_secs++;
 			uhd_sensor_value_free(&gpstime);
 			flag = 1;
-		}*/
+		}
 		/*if(frac_secs == 0)
 		{
 			s->status = uhd_usrp_set_time_next_pps(s->tx.usrp, full_secs+1, 0, 0);
@@ -240,7 +240,6 @@ void *tx_task(void *arg)
 				}
 			}*/
 		
-			//s->status = uhd_tx_streamer_send(s->tx.tx_streamer, (const void **)&(s->tx.buffer), SAMPLES_PER_BUFFER, &s->tx.md, (float)0.01, &num_samps_sent);	
 			s->status = uhd_tx_streamer_send(s->tx.tx_streamer, (const void **)&(s->tx.buffer), SAMPLES_PER_BUFFER, &s->tx.md, (float)0.01, &num_samps_sent);	
 			
 			if(s->status != 0)
@@ -734,7 +733,7 @@ int main(int argc, char *argv[])
 	//s.tx.usrp->set_time_unknown_pps(time_spec_t(0.0));
 
 	s.status = uhd_usrp_set_time_source(s.tx.usrp, "gpsdo", 0);
-	//s.status = uhd_usrp_set_time_source(s.tx.usrp, "gpsdo", 0);
+	s.status = uhd_usrp_set_clock_source(s.tx.usrp, "gpsdo", 0);
 	if(s.status != 0) {
 		fprintf(stderr, "Failed to set time source\n");
 		goto out;
