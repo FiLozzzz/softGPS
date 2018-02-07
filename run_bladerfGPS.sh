@@ -20,9 +20,11 @@ day=`date -u +%j`
 #./bladegps -t `date -u +'%Y/%m/%d,%H:%M:%S'` $* -i -l 36.374987,127.361584,60
 #./bladegps -t `date -u +'%Y/%m/%d,%H:%M:%S'` $* -i -l 36.391384,127.397872,60 #munji
 #./bladegps -t `date -u +'%Y/%m/%d,%H:%M:%S'` $* -i -l 37.369444,127.567778,60 #yeoju2
-./bladegps -t `date -u +'%Y/%m/%d,%H:%M:%S'` $* -i -l 37.3689,127.568333,60 #yeoju
+#./bladegps -t `date -u +'%Y/%m/%d,%H:%M:%S'` $* -i -l 37.3689,127.568333,60 #yeoju
 #./bladegps $* -i -l 37.3689,127.568333,60 #yeoju
 #./bladegps -t `date -u +'%Y/%m/%d,%H:%M:%S'` $* -i -l 36.397800,127.402501,60
 #./bladegps -e brdc1700.16n $* -i -l 36.374987,127.361584,60
 #./bladegps -t `date -u +'%Y/%m/%d,%H:%M:%S'` $* -i -l 36.372814,127.360602,20 #futsal R
-#./bladegps -t `date -u +'%Y/%m/%d,%H:%M:%S'` $* -i -l 36.372811,127.359878,20 #futsal L
+./bladegps -t `date -u +'%Y/%m/%d,%H:%M:%S'` $* -i -l 36.372811,127.359878,20 #futsal L
+#./bladegps -t `date -u +'%Y/%m/%d,%H:%M:%S'` $* -i -l 36.375278,127.361667,60 #N26
+#./bladegps -t `date -u +'%Y/%m/%d,%H:%M:%S'` $* -i -l 37.369444,127.5675,60 #N26

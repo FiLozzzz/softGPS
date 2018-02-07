@@ -46,8 +46,10 @@
 #define UP_KEY    'e'
 #define DOWN_KEY  'q'
 // Interactive motion
-#define MAX_VEL 2.7 // 2.77 m/s = 10 km/h
-#define DEL_VEL 0.2
+//#define MAX_VEL 2.7 // 2.77 m/s = 10 km/h
+#define MAX_VEL 1.0 // 2.77 m/s = 10 km/h
+//#define DEL_VEL 0.2
+#define DEL_VEL 0.1
 
 typedef struct {
 	char navfile[MAX_CHAR];
