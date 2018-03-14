@@ -1289,7 +1289,7 @@ void computeRange(range_t *rho, ephem_t eph, ionoutc_t *ionoutc, gpstime_t g, do
 
 	// Pseudorange.
 	//rho->range = range - SPEED_OF_LIGHT*clk[0];
-	rho->range = range - SPEED_OF_LIGHT*clk[0] - SPEED_OF_LIGHT * 1e-9 * 18187290 + SPEED_OF_LIGHT * 1e-9 * cnt;
+	rho->range = range - SPEED_OF_LIGHT*clk[0] - SPEED_OF_LIGHT * 1e-9 * 18187190 + SPEED_OF_LIGHT * 1e-9 * cnt;
 
 	// Relative velocity of SV and receiver.
 	rate = dotProd(vel, los)/range;
@@ -2502,6 +2502,8 @@ rinex:
 			}
 
 			// Store I/Q samples into buffer
+			//iq_buff[isamp*2] = (short)i_acc*32;
+			//iq_buff[isamp*2+1] = (short)q_acc*32;
 			iq_buff[isamp*2] = (short)i_acc*32;
 			iq_buff[isamp*2+1] = (short)q_acc*32;
 
@@ -2569,7 +2571,8 @@ rinex:
 
 		if (igrx%300==0) // Every 30 seconds
 		{
-			if (igrx%72000 == 1800)
+			//if (igrx%72000 == 1800)
+			if (igrx%9000 == 7800)
 			{	
 				neph = readRinexNavAll(eph, &ionoutc, navfile);
 				if(neph == 0)

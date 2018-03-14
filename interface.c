@@ -44,16 +44,18 @@ void automation()
 			sleep(1);
 			curr_time = time(NULL);
 			diff = curr_time - start;
-			if(diff >= sce[i][0])
+			if(diff >= sce[i][0] && i < n)
 			{
 				((int *)shm_addr)[0] = 1;
 				((int *)shm_addr)[1] = sce[i][1];
 				((int *)shm_addr)[2] = sce[i][2];
 				((int *)shm_addr)[3] = sce[i][3];
 				
-				if(i+1 < n)
+				if(i < n)
 					i++;
 			}
+			else if(i >= n)
+				break;
 		}
 		/*while(1)
 		{
@@ -100,13 +102,14 @@ void start_str2str()
 
 	while(1)
 	{
-		sleep(60);
+		sleep(30);
 		curr_time = time(NULL);
 		tmp = gmtime(&curr_time);
 		//if(0)
 		//if(tmp->tm_min % 5 == 0 && tmp->tm_sec <= 20 && min != tmp->tm_min)
 		//if(tmp->tm_min % 5 == 0 && tmp->tm_sec == 0)
-		if(tmp->tm_hour % 2 == 0 && tmp->tm_min == 0)
+		//if(tmp->tm_hour % 2 == 0 && tmp->tm_min == 0)
+		if(tmp->tm_min % 15 == 0)
 		{
 			//min = tmp->tm_min;
 			str2str();
@@ -128,7 +131,8 @@ void str2str()
 	}
 	else
 	{
-		sleep(120);
+		//sleep(120);
+		sleep(600);
 		kill(pid, SIGINT);
 		kill(pid, SIGINT);
 		kill(pid, SIGKILL);
