@@ -102,7 +102,7 @@ void start_str2str()
 
 	while(1)
 	{
-		sleep(30);
+		sleep(10);
 		curr_time = time(NULL);
 		tmp = gmtime(&curr_time);
 		//if(0)
@@ -110,6 +110,7 @@ void start_str2str()
 		//if(tmp->tm_min % 5 == 0 && tmp->tm_sec == 0)
 		//if(tmp->tm_hour % 2 == 0 && tmp->tm_min == 0)
 		if(tmp->tm_min % 15 == 0)
+		//if(tmp->tm_min % 5 == 0 && flag)
 		{
 			//min = tmp->tm_min;
 			str2str();
@@ -145,7 +146,25 @@ void str2str()
 			exit(127);
 		}
 		else
-			waitpid(pid, 0, 0);		
+		{
+			FILE *fp, *op;
+			char c;
+			waitpid(pid, 0, 0);
+			
+			fp = fopen("test.nav", "r");
+			if(fp != NULL)
+			{
+				op = fopen("rinex.nav", "w");
+				while(1) {
+					c = fgetc(fp);
+					if(c == EOF) break;
+					fputc(c, op);
+				}
+				fclose(fp);
+				fclose(op);
+				
+			}
+		}
 	}
 }
 
@@ -216,7 +235,7 @@ int main(void)
 					start_str2str();
 				else
 				{
-					system("gnome-terminal -x sh -c \"sudo ./run_bladerfGPS.sh -e test.nav ; bash\"");
+					system("gnome-terminal -x sh -c \"sudo ./run_bladerfGPS.sh -e rinex.nav ; bash\"");
 				}
 				break;
 			case 2:

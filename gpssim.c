@@ -1289,7 +1289,7 @@ void computeRange(range_t *rho, ephem_t eph, ionoutc_t *ionoutc, gpstime_t g, do
 
 	// Pseudorange.
 	//rho->range = range - SPEED_OF_LIGHT*clk[0];
-	rho->range = range - SPEED_OF_LIGHT*clk[0] - SPEED_OF_LIGHT * 1e-9 * 18187190 + SPEED_OF_LIGHT * 1e-9 * cnt;
+	rho->range = range - SPEED_OF_LIGHT*clk[0] - SPEED_OF_LIGHT * 1e-9 * 19004970 + SPEED_OF_LIGHT * 1e-9 * cnt;
 
 	// Relative velocity of SV and receiver.
 	rate = dotProd(vel, los)/range;
@@ -1573,7 +1573,8 @@ int checkSatVisibility(ephem_t eph, gpstime_t g, double *xyz, double elvMask, do
 	if (azel[1]*R2D > elvMask)
 		return (1); // Visible
 	// else
-	return (0); // Invisible
+	//return (0); // Invisible
+	return (1); // Invisible
 }
 
 int allocateChannel(channel_t *chan, ephem_t *eph, ionoutc_t ionoutc, gpstime_t grx, double *xyz, double elvMask)
@@ -2572,7 +2573,8 @@ rinex:
 		if (igrx%300==0) // Every 30 seconds
 		{
 			//if (igrx%72000 == 1800)
-			if (igrx%9000 == 7800)
+			if (igrx%9000 == 8400)
+			//if (igrx%3000 == 1800)
 			{	
 				neph = readRinexNavAll(eph, &ionoutc, navfile);
 				if(neph == 0)
@@ -2595,7 +2597,7 @@ rinex:
 						{
 							dt = subGpsTime(grx, eph[i][sv].toc);
 							//if (dt>=-2*SECONDS_IN_HOUR && dt<2*SECONDS_IN_HOUR)
-							if (dt>=-2*SECONDS_IN_HOUR && dt<300)
+							if (dt>=-2*SECONDS_IN_HOUR && dt< SECONDS_IN_HOUR)
 							{
 								ieph = i;
 								break;
@@ -2609,12 +2611,14 @@ rinex:
 
 				if (ieph == -1)
 				{
-					printf("ERROR: No current set of ephemerides has been found.\n");
+/*					printf("ERROR: No current set of ephemerides has been found.\n");
 #ifndef BLADE_GPS
 					exit(1);
 #else
 					goto exit;
 #endif
+*/
+					ieph = 0;
 				}
 				
 				for (i=0; i<MAX_CHAN; i++)
@@ -2682,7 +2686,7 @@ rinex:
 		grx = incGpsTime(grx, 0.1);
 		runtime = subGpsTime(grx, g0);
 
-		if(runtime >= 28800)
+		if(runtime >= 86400)
 			exit(1);
 
 		// Update time counter
