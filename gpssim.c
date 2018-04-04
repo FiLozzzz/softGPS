@@ -1289,7 +1289,8 @@ void computeRange(range_t *rho, ephem_t eph, ionoutc_t *ionoutc, gpstime_t g, do
 
 	// Pseudorange.
 	//rho->range = range - SPEED_OF_LIGHT*clk[0];
-	rho->range = range - SPEED_OF_LIGHT*clk[0] - SPEED_OF_LIGHT * 1e-9 * 19004970 + SPEED_OF_LIGHT * 1e-9 * cnt;
+	//rho->range = range - SPEED_OF_LIGHT*clk[0] - SPEED_OF_LIGHT * 1e-9 * 19004970 + SPEED_OF_LIGHT * 1e-9 * cnt;
+	rho->range = range - SPEED_OF_LIGHT*clk[0] - SPEED_OF_LIGHT * 1e-9 * 18187330 + SPEED_OF_LIGHT * 1e-9 * cnt;
 
 	// Relative velocity of SV and receiver.
 	rate = dotProd(vel, los)/range;
@@ -1595,6 +1596,7 @@ int allocateChannel(channel_t *chan, ephem_t *eph, ionoutc_t ionoutc, gpstime_t 
 			nsat++; // Number of visible satellites
 
 			if (allocatedSat[sv]==-1) // Visible but not allocated
+			//if (allocatedSat[sv]==-1 && nsat <= 6)
 			{
 				// Allocated new satellite
 				for (i=0; i<MAX_CHAN; i++)
@@ -2280,7 +2282,8 @@ rinex:
 	////////////////////////////////////////////////////////////
 
 	for (i=0; i<37; i++)	
-		ant_pat[i] = pow(10.0, -ant_pat_db[i]/20.0);
+		//ant_pat[i] = pow(10.0, -ant_pat_db[i]/20.0);
+		ant_pat[i] = pow(10.0, 0);
 
 	////////////////////////////////////////////////////////////
 	// Generate baseband signals
@@ -2505,8 +2508,8 @@ rinex:
 			// Store I/Q samples into buffer
 			//iq_buff[isamp*2] = (short)i_acc*32;
 			//iq_buff[isamp*2+1] = (short)q_acc*32;
-			iq_buff[isamp*2] = (short)i_acc*32;
-			iq_buff[isamp*2+1] = (short)q_acc*32;
+			iq_buff[isamp*2] = (short)i_acc*48;
+			iq_buff[isamp*2+1] = (short)q_acc*48;
 
 		} // End of omp parallel for
 
@@ -2573,8 +2576,8 @@ rinex:
 		if (igrx%300==0) // Every 30 seconds
 		{
 			//if (igrx%72000 == 1800)
-			if (igrx%9000 == 8400)
-			//if (igrx%3000 == 1800)
+			//if (igrx%9000 == 7800)
+			if (igrx%6000 == 0)
 			{	
 				neph = readRinexNavAll(eph, &ionoutc, navfile);
 				if(neph == 0)
@@ -2589,7 +2592,7 @@ rinex:
 
 				ieph = -1;
 
-				for (i=0; i<neph; i++)
+				for (i=neph-1; i>=0; i--)
 				{
 					for (sv=0; sv<MAX_SAT; sv++)
 					{
@@ -2618,7 +2621,7 @@ rinex:
 					goto exit;
 #endif
 */
-					ieph = 0;
+					ieph = neph-1;
 				}
 				
 				for (i=0; i<MAX_CHAN; i++)
@@ -2686,7 +2689,7 @@ rinex:
 		grx = incGpsTime(grx, 0.1);
 		runtime = subGpsTime(grx, g0);
 
-		if(runtime >= 86400)
+		if(runtime >= 129600)
 			exit(1);
 
 		// Update time counter

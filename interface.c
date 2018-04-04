@@ -7,7 +7,7 @@
 #include <fcntl.h>
 #include <stdlib.h>
 
-pid_t pid, pid2, pid3, pid4, ppid;
+pid_t pid, pid2, pid3, pid4, pid5, ppid;
 void *shm_addr;//state, period, shift, shift_max;
 
 void clearScreen()
@@ -98,21 +98,23 @@ void start_str2str()
 {
 	struct tm *tmp;
 	time_t curr_time;
-	int min = -1;
+	int flag = 1;
 
 	while(1)
 	{
-		sleep(10);
+		sleep(1);
 		curr_time = time(NULL);
 		tmp = gmtime(&curr_time);
 		//if(0)
 		//if(tmp->tm_min % 5 == 0 && tmp->tm_sec <= 20 && min != tmp->tm_min)
 		//if(tmp->tm_min % 5 == 0 && tmp->tm_sec == 0)
 		//if(tmp->tm_hour % 2 == 0 && tmp->tm_min == 0)
-		if(tmp->tm_min % 15 == 0)
+		//if(tmp->tm_min % 15 == 0)
+		if(tmp->tm_hour % 2 == 0 || flag)
 		//if(tmp->tm_min % 5 == 0 && flag)
 		{
 			//min = tmp->tm_min;
+			flag = 0;
 			str2str();
 		}
 	}
@@ -123,22 +125,34 @@ void str2str()
 	pid = fork();
 	if(pid == 0)
 	{
-		//int fd = open("log.txt", O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
+		int fd = open("log.txt", O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
 		static char *argv2[] = {"str2str", "-c", "commands.txt", "-in", "serial://ttyACM0:9600:8:n:1:off", "-out", "test.ubx"};
-		//dup2(fd, 1);
-		//dup2(fd, 2);
+		dup2(fd, 1);
+		dup2(fd, 2);
 		execv("/usr/local/bin/str2str", argv2);
 		exit(127);
 	}
 	else
 	{
 		//sleep(120);
-		sleep(600);
+		//sleep(600);
+		struct tm *tmp;
+		time_t curr_time;
+		while(1)
+		{
+			sleep(1);
+			curr_time = time(NULL);
+			tmp = gmtime(&curr_time);
+
+			if(tmp->tm_hour % 2 == 1 && tmp->tm_min >= 59)
+				break;
+		}
+
 		kill(pid, SIGINT);
 		kill(pid, SIGINT);
 		kill(pid, SIGKILL);
 		
-		pid = fork();
+		/*pid = fork();
 		
 		if(pid == 0) {
 			static char *argv3[] = {"convbin", "test.ubx"};
@@ -164,7 +178,145 @@ void str2str()
 				fclose(op);
 				
 			}
+		}*/
+	}
+}
+
+void start_convbin()
+{
+	struct tm *tmp;
+	time_t curr_time;
+
+	while(1)
+	{
+		sleep(1);
+		curr_time = time(NULL);
+		tmp = gmtime(&curr_time);
+		if(tmp->tm_min % 10 == 9 && tmp->tm_sec == 0)
+		{
+			convbin();
 		}
+	}
+}
+
+int convbin()
+{
+	pid5 = fork();
+	if(pid5 == 0)
+	{
+		static char *argv3[] = {"convbin", "test.ubx"};
+		execv("/usr/local/bin/convbin", argv3);
+		exit(127);
+	}
+	else
+	{
+		FILE *fp, *op;
+		char line[520][82], tmp[20];
+		int i, j, num = 0, start = -1;
+		long t1, t2, t3;
+		struct epoch {
+			int y, m, d, hh, mm;
+		}prev, min, e;
+		prev.y = prev.m = prev.d = prev.hh = prev.mm = 0;
+
+		waitpid(pid5, 0, 0);
+			
+		fp = fopen("test.nav", "r");
+		if(fp != NULL)
+		{
+			op = fopen("rinex.nav", "w");
+			while(1) {
+				if(fgets(line[num++], 82, fp) == NULL) {
+					num--;
+					break;
+				}
+				if(start < 0)
+					fputs(line[num-1], op);
+				if(strncmp(line[num-1]+60, "END OF HEADER", 13) == 0)
+					start = num;
+			}
+			fclose(fp);
+
+			while(1)
+			{
+				min.m = min.d = min.hh = min.mm = 0;
+				min.y = 100;
+				t1 = ((((prev.y * 365 + prev.m) * 31) + prev.d) * 24 + prev.hh) * 60 + prev.mm;
+				t2 = ((((min.y * 365 + min.m) * 31) + min.d) * 24 + min.hh) * 60 + min.mm;
+				for(i=start; i<num; i+=8) 
+				{
+					strncpy(tmp, line[i]+3, 2);
+					tmp[2] = 0;
+					e.y = atoi(tmp);
+
+					strncpy(tmp, line[i]+6, 2);
+					tmp[2] = 0;
+					e.m = atoi(tmp);
+
+					strncpy(tmp, line[i]+9, 2);
+					tmp[2] = 0;
+					e.d = atoi(tmp);
+
+					strncpy(tmp, line[i]+12, 2);
+					tmp[2] = 0;
+					e.hh = atoi(tmp);
+
+					strncpy(tmp, line[i]+15, 2);
+					tmp[2] = 0;
+					e.mm = atoi(tmp);
+
+					t3 = ((((e.y * 365 + e.m) * 31) + e.d) * 24 + e.hh) * 60 + e.mm;
+					if(t1 < t3 && t3 < t2)
+					{
+						min = e;
+						t2 = ((((min.y * 365 + min.m) * 31) + min.d) * 24 + min.hh) * 60 + min.mm;
+					}
+				}
+
+				if(min.y == 100)
+					break;
+
+				for(i=start; i<num; i+=8)
+				{
+					strncpy(tmp, line[i]+3, 2);
+					tmp[2] = 0;
+					e.y = atoi(tmp);
+
+					strncpy(tmp, line[i]+6, 2);
+					tmp[2] = 0;
+					e.m = atoi(tmp);
+
+					strncpy(tmp, line[i]+9, 2);
+					tmp[2] = 0;
+					e.d = atoi(tmp);
+
+					strncpy(tmp, line[i]+12, 2);
+					tmp[2] = 0;
+					e.hh = atoi(tmp);
+
+					strncpy(tmp, line[i]+15, 2);
+					tmp[2] = 0;
+					e.mm = atoi(tmp);
+					
+					if(min.y == e.y && min.m == e.m && min.d == e.d && min.hh == e.hh && min.mm == e.mm)
+					{
+						time_t curr_time;
+						struct tm *tmp2;
+						curr_time = time(NULL);
+						tmp2 = gmtime(&curr_time);
+
+						if(tmp2->tm_year + 1900 == e.y + 2000)
+							for(j=i; j<i+8; j++)
+								fputs(line[j], op);
+					}
+				}
+
+				prev = min;
+			}
+			fclose(op);
+			return (num-start)/8;
+		}
+		return 0;
 	}
 }
 
@@ -174,6 +326,7 @@ int main(void)
 	int n, tmp[5];
 	uid_t uid;
 	key_t shm_id;
+	char input[100];
 
 	//void *shm_addr;//state, period, shift, shift_max;
 
@@ -211,11 +364,18 @@ int main(void)
 	((int *)shm_addr)[3] = 0;
 
 	//system("gnome-terminal -x sh -c \"sudo str2str -c commands.txt -in serial://ttyACM0 -out tcpsvr://:8887 ; bash\"");
+	pid2 = fork();
+	if(pid2 == 0)
+		start_str2str();
+
+	pid4 = fork();
+	if(pid4 == 0)
+		start_convbin();
 
 	while(1) {
 		printf("\n");
 		printf("1. Start GPS Spoofer\n");
-		printf("2. Generate RINEX file (Duration: 2min)\n");
+		printf("2. Extract GPS Nav Msg\n");
 		printf("3. Time shift configuration\n");
 		printf("4. Start time shift\n");
 		printf("5. Pause time shift\n");
@@ -224,23 +384,26 @@ int main(void)
 		printf("8. Clear screen\n");
 		printf("9. Exit\n");
 
-		scanf("%d", &n);
+		//scanf("%d", &n);
+		gets(input);
+		n = atoi(input);
 		printf("\n");
 
 		switch(n)
 		{
 			case 1:
-				pid2 = fork();
+				/*pid2 = fork();
 				if(pid2 == 0)
 					start_str2str();
 				else
 				{
 					system("gnome-terminal -x sh -c \"sudo ./run_bladerfGPS.sh -e rinex.nav ; bash\"");
-				}
+				}*/
+				if(convbin() >= 5)
+					system("gnome-terminal -x sh -c \"sudo ./run_bladerfGPS.sh -e rinex.nav ; bash\"");
 				break;
 			case 2:
-				printf("Generate RINEX file...\n");
-				str2str();
+				printf("The number of GPS satellites: %d\n", convbin());
 				break;
 			case 3:
 				printf("Period(s), shift step(ns), max abs shift(ns)\n");
