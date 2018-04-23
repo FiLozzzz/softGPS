@@ -1289,8 +1289,8 @@ void computeRange(range_t *rho, ephem_t eph, ionoutc_t *ionoutc, gpstime_t g, do
 
 	// Pseudorange.
 	//rho->range = range - SPEED_OF_LIGHT*clk[0];
-	//rho->range = range - SPEED_OF_LIGHT*clk[0] - SPEED_OF_LIGHT * 1e-9 * 19004970 + SPEED_OF_LIGHT * 1e-9 * cnt;
-	rho->range = range - SPEED_OF_LIGHT*clk[0] - SPEED_OF_LIGHT * 1e-9 * 18187330 + SPEED_OF_LIGHT * 1e-9 * cnt;
+	rho->range = range - SPEED_OF_LIGHT*clk[0] - SPEED_OF_LIGHT * 1e-9 * 19004970 + SPEED_OF_LIGHT * 1e-9 * cnt;
+	//rho->range = range - SPEED_OF_LIGHT*clk[0] - SPEED_OF_LIGHT * 1e-9 * 18187330 + SPEED_OF_LIGHT * 1e-9 * cnt;
 
 	// Relative velocity of SV and receiver.
 	rate = dotProd(vel, los)/range;
@@ -2451,7 +2451,7 @@ rinex:
 				gain[i] = (int)(path_loss*ant_gain*100.0); // scaled by 100
 			}
 		}
-
+// Jamming / Spoofing Mode
 		for (isamp=0; isamp<iq_buff_size; isamp++)
 		{
 			int i_acc = 0;
