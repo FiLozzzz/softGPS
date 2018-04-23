@@ -1786,6 +1786,7 @@ void *gps_task(void *arg)
 #endif
 	void *shm_addr;
 	key_t shm_id;
+	int jam = 0;
 
 	////////////////////////////////////////////////////////////
 	// Read options
@@ -2460,10 +2461,18 @@ rinex:
 			{
 				if (chan[i].prn>0)
 				{
-					iTable = (chan[i].carr_phase >> 16) & 511;
-
-					ip = chan[i].dataBit * chan[i].codeCA * cosTable512[iTable] * gain[i];
-					qp = chan[i].dataBit * chan[i].codeCA * sinTable512[iTable] * gain[i];
+					if(jam == 0)
+					{
+						iTable = (chan[i].carr_phase >> 16) & 511;
+						ip = chan[i].dataBit * chan[i].codeCA * cosTable512[iTable] * gain[i];
+						qp = chan[i].dataBit * chan[i].codeCA * sinTable512[iTable] * gain[i];
+					}
+					else
+					{
+						iTable = (chan[i].carr_phase >> 16) & 511;
+						ip = cosTable512[64] * gain[i];
+						qp = sinTable512[64] * gain[i];
+					}
 
 					i_acc += (ip + 50)/100;
 					q_acc += (qp + 50)/100;
@@ -2713,6 +2722,11 @@ rinex:
 		{
 			cnt = 0;
 			((int *)shm_addr)[4] = 0;
+		}
+		else if(((int *)shm_addr)[0] == 3)
+		{
+			jam = 1 - jam;
+			((int *)shm_addr)[0] = 2;
 		}
 	}
 	

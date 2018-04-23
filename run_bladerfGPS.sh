@@ -26,5 +26,6 @@ day=`date -u +%j`
 #./bladegps -e brdc1700.16n $* -i -l 36.374987,127.361584,60
 #./bladegps -t `date -u +'%Y/%m/%d,%H:%M:%S'` $* -i -l 36.372814,127.360602,20 #futsal R
 #./bladegps -t `date -u +'%Y/%m/%d,%H:%M:%S'` $* -i -l 36.372811,127.359878,20 #futsal L
-./bladegps -t `date -u +'%Y/%m/%d,%H:%M:%S'` $* -i -l 36.374444,127.362778,60 #N26
+#./bladegps -t `date -u +'%Y/%m/%d,%H:%M:%S'` $* -i -l 36.374444,127.362778,60 #N26
 #./bladegps -t `date -u +'%Y/%m/%d,%H:%M:%S'` $* -i -l 36.392386,127.392365,60 #KEPRI
+./bladegps -t `date -u +'%Y/%m/%d,%H:%M:%S'` $* -i

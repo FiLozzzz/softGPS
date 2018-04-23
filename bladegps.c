@@ -6,6 +6,10 @@
 #include <signal.h>
 #include <stdint.h>
 
+#include <uhd/types/sensors.h>
+#include <uhd/config.h>
+#include <uhd/error.h>
+
 // for _getch used in Windows runtime.
 #ifdef WIN32
 #include <conio.h>
@@ -688,6 +692,45 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "Failed to set up buffer");
 		goto out;
 	}
+	
+	s.status = uhd_usrp_set_time_source(s.tx.usrp, "gpsdo", 0);
+	s.status = uhd_usrp_set_clock_source(s.tx.usrp, "gpsdo", 0);
+	if(s.status != 0) {
+		fprintf(stderr, "Failed to set time source\n");
+		goto out;
+	}
+
+	uhd_sensor_value_handle sensor;
+	char val_str[80];
+	char *pch, *ptrs[80];
+	int nums = 0;
+	float lat, lng, hgt, intpart, frac;
+	s.status = uhd_sensor_value_make_from_bool(&sensor, "temp", 0, "true", "false");
+	uhd_usrp_get_mboard_sensor(s.tx.usrp, "gps_gpgga", 0, &sensor);
+	uhd_sensor_value_to_pp_string(sensor, val_str, 128);
+	printf("\n%s\n", val_str);
+
+	pch = strtok(val_str, ",");
+	ptrs[nums++] = pch;
+
+	while(pch != NULL)
+	{
+		pch = strtok(NULL, ",");
+		ptrs[nums++] = pch;
+	}
+
+	frac = modff(atof(ptrs[2]) / 100, &intpart);
+	lat = intpart + frac * 100 / 60;
+	frac = modff(atof(ptrs[4]) / 100, &intpart);
+	lng = intpart + frac * 100 / 60;
+	hgt = atof(ptrs[11]);
+
+	if(strcmp(ptrs[3], "N")) lat *= (-1);
+	if(strcmp(ptrs[5], "E")) lng *= (-1);
+			
+	s.opt.llh[0] = lat / R2D; // convert to RAD
+	s.opt.llh[1] = lng / R2D; // convert to RAD
+	s.opt.llh[2] = hgt;
 
 	// Start GPS task.
 	s.status = start_gps_task(&s);
@@ -732,13 +775,7 @@ int main(int argc, char *argv[])
 	//s.tx.usrp->set_time_source("external");
 	//s.tx.usrp->set_time_unknown_pps(time_spec_t(0.0));
 
-	s.status = uhd_usrp_set_time_source(s.tx.usrp, "gpsdo", 0);
-	s.status = uhd_usrp_set_clock_source(s.tx.usrp, "gpsdo", 0);
-	if(s.status != 0) {
-		fprintf(stderr, "Failed to set time source\n");
-		goto out;
-	}
-	
+
 	/*s.status = start_rinex_task(&s);
 	if (s.status < 0) {
 		fprintf(stderr, "Failed to start RINEX task.\n");

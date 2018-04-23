@@ -6,9 +6,11 @@
 #include <signal.h>
 #include <fcntl.h>
 #include <stdlib.h>
+#include <string.h>
 
-pid_t pid, pid2, pid3, pid4, pid5, ppid;
+pid_t pid, pid1, pid2, pid3, pid4, pid5, ppid;
 void *shm_addr;//state, period, shift, shift_max;
+char arg[512];
 
 void clearScreen()
 {
@@ -92,6 +94,91 @@ void automation()
 			}
 		}*/
 	}
+}
+
+void readllh()
+{
+	pid1 = fork();
+	if(pid1 == 0)
+	{
+		int fd = open("log.txt", O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
+		static char *argv4[] = {"str2str", "-c", "commands2.txt", "-in", "serial://ttyACM0:9600:8:n:1:off", "-out", "nmea.ubx"};
+		dup2(fd, 1);
+		dup2(fd, 2);
+		execv("/usr/local/bin/str2str", argv4);
+		exit(127);
+	}
+	else
+	{
+    	FILE *fp;
+    	char c, line[81];
+    	char *pch, *ptrs[80];
+    	int i, nums = 0;
+    	float lat = -1, lng, hgt, intpart, frac;
+	
+
+		//printf("pid = %d\n", pid);
+		sleep(3);
+
+		kill(pid1, SIGINT);
+		kill(pid1, SIGINT);
+		kill(pid1, SIGKILL);
+		
+    	fp = fopen("nmea.ubx", "rb");
+    	if(fp == NULL)
+   		{
+			fprintf(stderr, "Failed to read the current location\n");
+			return;
+		}
+
+    	while(1)
+    	{
+       		do {
+            	fread(&c, sizeof(char), 1, fp);
+        	}while(c != '$');
+        
+        	fread(line, sizeof(char), 6, fp);
+        	line[6] = '\0';
+
+        	if(!strcmp(line, "GPGGA,"))
+        	{
+           		fread(line, sizeof(char), 80, fp);
+           		for(i=0; i<79; i++)
+               		if(line[i] == 13 && line[i+1] == 10)
+                   		break;
+           		line[i] = '\0';
+
+           		pch = strtok(line, ",");
+            	ptrs[nums++] = pch;
+
+            	while(pch != NULL)
+            	{
+                	pch = strtok(NULL, ",");
+                	ptrs[nums++] = pch;
+            	}
+
+            	if(nums > 10)
+            	{
+                	frac = modff(atof(ptrs[1]) / 100, &intpart);
+                	lat = intpart + frac * 100 / 60;
+                	frac = modff(atof(ptrs[3]) / 100, &intpart);
+                	lng = intpart + frac * 100 / 60;
+                	hgt = atof(ptrs[10]);
+
+                	if(strcmp(ptrs[2], "N"))
+                	   lat *= (-1);
+                	if(strcmp(ptrs[4], "E"))
+                	   lng *= (-1);
+
+					sprintf(arg, "gnome-terminal -x sh -c \"sudo ./run_bladerfGPS.sh -e rinex.nav -l %f,%f,%d; bash\"", lat, lng, (int)hgt);
+                	//printf("\narg = %s\n", arg); 
+                	break;
+            	}
+       	 	}
+    	}    
+		if(lat < 0)
+			fprintf(stderr, "Failed to read the current location\n");
+	}	
 }
 
 void start_str2str()
@@ -363,6 +450,8 @@ int main(void)
 	((int *)shm_addr)[2] = 0;
 	((int *)shm_addr)[3] = 0;
 
+	//readllh();
+
 	//system("gnome-terminal -x sh -c \"sudo str2str -c commands.txt -in serial://ttyACM0 -out tcpsvr://:8887 ; bash\"");
 	pid2 = fork();
 	if(pid2 == 0)
@@ -382,7 +471,8 @@ int main(void)
 		printf("6. End time shift\n");
 		printf("7. Read attack status\n");
 		printf("8. Clear screen\n");
-		printf("9. Exit\n");
+		printf("9. Jamming/Spoofing\n");
+		printf("10. Exit\n");
 
 		//scanf("%d", &n);
 		gets(input);
@@ -400,6 +490,7 @@ int main(void)
 					system("gnome-terminal -x sh -c \"sudo ./run_bladerfGPS.sh -e rinex.nav ; bash\"");
 				}*/
 				if(convbin() >= 5)
+					//system(arg);
 					system("gnome-terminal -x sh -c \"sudo ./run_bladerfGPS.sh -e rinex.nav ; bash\"");
 				break;
 			case 2:
@@ -433,13 +524,16 @@ int main(void)
 				clearScreen();
 				break;	
 			case 9:
+				((int *)shm_addr)[0] = 3;
+				break;
+			case 10:
 				break;
 			default:
-				printf("Enter 1~9\n");
+				printf("Enter 1~10\n");
 				sleep(1);
 		}
 
-		if(n == 9)
+		if(n == 10)
 			break;
 	}
 	
