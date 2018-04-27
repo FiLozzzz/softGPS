@@ -1289,8 +1289,8 @@ void computeRange(range_t *rho, ephem_t eph, ionoutc_t *ionoutc, gpstime_t g, do
 
 	// Pseudorange.
 	//rho->range = range - SPEED_OF_LIGHT*clk[0];
-	//rho->range = range - SPEED_OF_LIGHT*clk[0] - SPEED_OF_LIGHT * 1e-9 * 19004970 + SPEED_OF_LIGHT * 1e-9 * cnt;
-	rho->range = range - SPEED_OF_LIGHT*clk[0] - SPEED_OF_LIGHT * 1e-9 * 18187330 + SPEED_OF_LIGHT * 1e-9 * cnt;
+	rho->range = range - SPEED_OF_LIGHT*clk[0] - SPEED_OF_LIGHT * 1e-9 * 19004970 + SPEED_OF_LIGHT * 1e-9 * cnt;
+	//rho->range = range - SPEED_OF_LIGHT*clk[0] - SPEED_OF_LIGHT * 1e-9 * 18187330 + SPEED_OF_LIGHT * 1e-9 * cnt;
 
 	// Relative velocity of SV and receiver.
 	rate = dotProd(vel, los)/range;
@@ -2698,8 +2698,8 @@ rinex:
 		grx = incGpsTime(grx, 0.1);
 		runtime = subGpsTime(grx, g0);
 
-		if(runtime >= 129600)
-			exit(1);
+		//if(runtime >= 129600)
+		//	exit(1);
 
 		// Update time counter
 		printf("\rTime into run = %4.1f ", subGpsTime(grx, g0));
@@ -2728,6 +2728,9 @@ rinex:
 			jam = 1 - jam;
 			((int *)shm_addr)[0] = 2;
 		}
+
+		if(iumd +1 >= numd)
+			iumd = 0;
 	}
 	
 	shmdt(shm_addr);
