@@ -279,7 +279,7 @@ void start_convbin()
 		sleep(1);
 		curr_time = time(NULL);
 		tmp = gmtime(&curr_time);
-		if(tmp->tm_min % 10 == 9 && tmp->tm_sec == 0)
+		if(tmp->tm_min % 15 == 14 && tmp->tm_sec == 0)
 		{
 			convbin();
 		}
@@ -512,6 +512,9 @@ int main(void)
 			case 6:
 				((int *)shm_addr)[0] = 0;
 				((int *)shm_addr)[4] = 0;
+				kill(pid3, SIGINT);
+				kill(pid3, SIGINT);
+				kill(pid3, SIGKILL);
 				break;
 			case 7:
 				printf("Status : %d\n", ((int *)shm_addr)[0]);

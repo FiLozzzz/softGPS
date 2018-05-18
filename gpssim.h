@@ -169,7 +169,9 @@ typedef struct
 	int carr_phasestep;	/*< Carrier phasestep */
 	double code_phase; /*< Code phase */
 	gpstime_t g0;	/*!< GPS time at start */
-	unsigned long sbf[5][N_DWRD_SBF]; /*!< current subframe */
+	unsigned long sbf[3][N_DWRD_SBF]; /*!< current subframe */
+	unsigned long sbf4[25][N_DWRD_SBF]; /*!< current subframe */
+	unsigned long sbf5[25][N_DWRD_SBF]; /*!< current subframe */
 	unsigned long dwrd[N_DWRD]; /*!< Data words of sub-frame */
 	int iword;	/*!< initial word */
 	int ibit;	/*!< initial bit */

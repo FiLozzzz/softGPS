@@ -677,6 +677,23 @@ void eph2sbf(const ephem_t eph, const ionoutc_t ionoutc, unsigned long sbf[5][N_
 	return;
 }
 
+void ubx2sbf(unsigned long ubxsbf[3][N_DWRD_SBF], unsigned long ubxsbf4[25][N_DWRD_SBF], unsigned long ubxsbf5[25][N_DWRD_SBF],
+		unsigned long sbf[3][N_DWRD_SBF], unsigned long sbf4[25][N_DWRD_SBF], unsigned long sbf5[25][N_DWRD_SBF])
+{
+	int i, j;
+
+	for(i=0; i<3; i++)
+		for(j=0; j<N_DWRD_SBF; j++)
+			sbf[i][j] = ubxsbf[i][j];
+
+	for(i=0; i<25; i++)
+		for(j=0; j<N_DWRD_SBF; j++)
+		{
+			sbf4[i][j] = ubxsbf4[i][j];
+			sbf5[i][j] = ubxsbf5[i][j];
+		}
+}
+
 /*! \brief Count number of bits set to 1
  *  \param[in] v long word in whihc bits are counted
  *  \returns Count of bits set to 1
@@ -766,6 +783,85 @@ unsigned long computeChecksum(unsigned long source, int nib)
 	//D |= (source & 0xC0000000UL); // Add D29* and D30* from source data bits
 
 	return(D);
+}
+
+void readUBX(unsigned long sbf[MAX_SAT][3][N_DWRD_SBF], unsigned long sbf4[MAX_SAT][25][N_DWRD_SBF], unsigned long sbf5[MAX_SAT][25][N_DWRD_SBF])
+{
+	FILE *fp;
+	unsigned char head[2], classId[2], len[2];
+	unsigned char rsv[10], temp;
+	unsigned int word[10];
+	int i, sfnum, pageId, tow, idx;
+
+	fp = fopen("test.ubx", "rb");
+	if(fp == NULL)
+		return;
+
+	while(1)
+	{
+		if(fread(&head[0], sizeof(unsigned char), 1, fp) == 0)
+			break;
+
+		if(head[0] != 0xb5)
+			continue;
+	
+		if(fread(&head[1], sizeof(unsigned char), 1, fp) == 0)
+			break;
+
+		if(head[1] == 0x62)
+		{
+			fread(classId, sizeof(unsigned char), 2, fp);
+			if(classId[0] == 0x03 && classId[1] == 0x0f)
+			{
+				fread(len, sizeof(unsigned char), 2, fp);
+				fread(rsv, sizeof(unsigned char), 2, fp);
+				if(rsv[1] == 0)
+				{
+					fread(&temp, sizeof(unsigned char), 1, fp);
+					idx = (int)temp;
+					idx -= 1;
+					fread(rsv, sizeof(unsigned char), 10, fp);
+					fread(word, 4, 10, fp);
+					sfnum = (int)((word[1]>>8)&7);
+					tow = (int)((word[1]>>13)&0x1ffff);
+					if(sfnum == 4)
+					{
+						pageId = ((tow-1)/5)%25;
+						
+						for(i=0; i<N_DWRD_SBF; i++)
+						{
+							sbf4[idx][pageId][i] = (unsigned long)(word[i] & 0x3fffffc0);
+							if(i == 1)
+								sbf4[idx][pageId][1] = sbf4[idx][pageId][1] & 0x00001fc0;
+						}
+					}
+					else if(sfnum == 5)
+					{
+						pageId = ((tow-1)/5)%25;
+						
+						for(i=0; i<N_DWRD_SBF; i++)
+						{
+							sbf5[idx][pageId][i] = (unsigned long)(word[i] & 0x3fffffc0);
+							if(i == 1)
+								sbf5[idx][pageId][1] = sbf5[idx][pageId][1] & 0x00001fc0;
+						}				
+					}
+					else
+					{
+						for(i=0; i<N_DWRD_SBF; i++)
+						{
+							sbf[idx][sfnum-1][i] = (unsigned long)(word[i] & 0x3fffffc0);
+							if(i == 1)
+								sbf[idx][sfnum-1][1] = sbf[idx][sfnum-1][1] & 0x00001fc0;
+							else if(sfnum == 1 && i == 2)
+								sbf[idx][sfnum-1][2] = sbf[idx][sfnum-1][2] & 0x000fffc0;
+						}
+					}
+				}
+			}
+		}		
+	}
+	fclose(fp);
 }
 
 /*! \brief Replace all 'E' exponential designators to 'D'
@@ -1289,8 +1385,8 @@ void computeRange(range_t *rho, ephem_t eph, ionoutc_t *ionoutc, gpstime_t g, do
 
 	// Pseudorange.
 	//rho->range = range - SPEED_OF_LIGHT*clk[0];
-	rho->range = range - SPEED_OF_LIGHT*clk[0] - SPEED_OF_LIGHT * 1e-9 * 19004970 + SPEED_OF_LIGHT * 1e-9 * cnt;
-	//rho->range = range - SPEED_OF_LIGHT*clk[0] - SPEED_OF_LIGHT * 1e-9 * 18187330 + SPEED_OF_LIGHT * 1e-9 * cnt;
+	//rho->range = range - SPEED_OF_LIGHT*clk[0] - SPEED_OF_LIGHT * 1e-9 * 19004970 + SPEED_OF_LIGHT * 1e-9 * cnt;
+	rho->range = range - SPEED_OF_LIGHT*clk[0] - SPEED_OF_LIGHT * 1e-9 * 10011230 + SPEED_OF_LIGHT * 1e-9 * cnt;
 
 	// Relative velocity of SV and receiver.
 	rate = dotProd(vel, los)/range;
@@ -1480,10 +1576,14 @@ int generateNavMsg(gpstime_t g, channel_t *chan, int init)
 	unsigned sbfwrd;
 	unsigned long prevwrd;
 	int nib;
+	int pageId;
 
 	g0.week = g.week;
 	g0.sec = (double)(((unsigned long)(g.sec+0.5))/30UL) * 30.0; // Align with the full frame length = 30 sec
 	chan->g0 = g0; // Data bit reference time
+
+	pageId = ((int)g0.sec)/30;
+	pageId %= 25;
 
 	wn = (unsigned long)(g0.week%1024);
 	tow = ((unsigned long)g0.sec)/6UL;
@@ -1494,7 +1594,8 @@ int generateNavMsg(gpstime_t g, channel_t *chan, int init)
 
 		for (iwrd=0; iwrd<N_DWRD_SBF; iwrd++)
 		{
-			sbfwrd = chan->sbf[4][iwrd];
+			//sbfwrd = chan->sbf[4][iwrd];
+			sbfwrd = chan->sbf5[pageId][iwrd];
 
 			// Add TOW-count message into HOW
 			if (iwrd==1)
@@ -1532,7 +1633,12 @@ int generateNavMsg(gpstime_t g, channel_t *chan, int init)
 
 		for (iwrd=0; iwrd<N_DWRD_SBF; iwrd++)
 		{
-			sbfwrd = chan->sbf[isbf][iwrd];
+			if(isbf == 3)
+				sbfwrd = chan->sbf4[pageId][iwrd];
+			else if(isbf == 4)
+				sbfwrd = chan->sbf5[pageId][iwrd];
+			else
+				sbfwrd = chan->sbf[isbf][iwrd];
 
 			// Add transmission week number to Subframe 1
 			if ((isbf==0)&&(iwrd==2))
@@ -1578,7 +1684,9 @@ int checkSatVisibility(ephem_t eph, gpstime_t g, double *xyz, double elvMask, do
 	return (1); // Invisible
 }
 
-int allocateChannel(channel_t *chan, ephem_t *eph, ionoutc_t ionoutc, gpstime_t grx, double *xyz, double elvMask)
+int allocateChannel(channel_t *chan, ephem_t *eph, ionoutc_t ionoutc, gpstime_t grx, double *xyz, double elvMask,
+		unsigned long sbf[MAX_SAT][3][N_DWRD_SBF], unsigned long sbf4[MAX_SAT][25][N_DWRD_SBF],
+		unsigned long sbf5[MAX_SAT][25][N_DWRD_SBF])
 {
 	int nsat=0;
 	int i,sv;
@@ -1612,7 +1720,8 @@ int allocateChannel(channel_t *chan, ephem_t *eph, ionoutc_t ionoutc, gpstime_t 
 						codegen(chan[i].ca, chan[i].prn);
 
 						// Generate subframe
-						eph2sbf(eph[sv], ionoutc, chan[i].sbf);
+						//eph2sbf(eph[sv], ionoutc, chan[i].sbf);
+						ubx2sbf(sbf[sv], sbf4[sv], sbf5[sv], chan[i].sbf, chan[i].sbf4, chan[i].sbf5);
 
 						// Generate navigation message
 						generateNavMsg(grx, &chan[i], 1);
@@ -1718,6 +1827,8 @@ void *gps_task(void *arg)
 	int sv;
 	int neph,ieph;
 	ephem_t eph[EPHEM_ARRAY_SIZE][MAX_SAT];
+	unsigned long sbf[MAX_SAT][3][N_DWRD_SBF];
+	unsigned long sbf4[MAX_SAT][25][N_DWRD_SBF], sbf5[MAX_SAT][25][N_DWRD_SBF];
 	gpstime_t g0;
 	
 	double llh[3];
@@ -2051,6 +2162,7 @@ void *gps_task(void *arg)
 
 rinex:
 	neph = readRinexNavAll(eph, &ionoutc, navfile);
+	readUBX(sbf, sbf4, sbf5);
 
 	if (neph==0)
 	{
@@ -2167,7 +2279,7 @@ rinex:
 	t0.sec = tmp->tm_sec;
 
 	date2gps(&t0, &g0);
-	g0.sec += 21;
+	g0.sec += 19;
 	gps2date(&g0, &t0);
 
 	printf("Start time = %4d/%02d/%02d,%02d:%02d:%02.0f (%d:%.0f)\n", 
@@ -2269,7 +2381,7 @@ rinex:
 	grx = incGpsTime(g0, 0.0);
 
 	// Allocate visible satellites
-	allocateChannel(chan, eph[ieph], ionoutc, grx, xyz[0], elvmask);
+	allocateChannel(chan, eph[ieph], ionoutc, grx, xyz[0], elvmask, sbf, sbf4, sbf5);
 
 	for(i=0; i<MAX_CHAN; i++)
 	{
@@ -2515,10 +2627,10 @@ rinex:
 			}
 
 			// Store I/Q samples into buffer
-			//iq_buff[isamp*2] = (short)i_acc*32;
-			//iq_buff[isamp*2+1] = (short)q_acc*32;
-			iq_buff[isamp*2] = (short)i_acc*48;
-			iq_buff[isamp*2+1] = (short)q_acc*48;
+			iq_buff[isamp*2] = (short)i_acc;
+			iq_buff[isamp*2+1] = (short)q_acc;
+			//iq_buff[isamp*2] = (short)i_acc*48;
+			//iq_buff[isamp*2+1] = (short)q_acc*48;
 
 		} // End of omp parallel for
 
@@ -2586,7 +2698,7 @@ rinex:
 		{
 			//if (igrx%72000 == 1800)
 			//if (igrx%9000 == 7800)
-			if (igrx%6000 == 0)
+			if (igrx%9000 == 0)
 			{	
 				neph = readRinexNavAll(eph, &ionoutc, navfile);
 				if(neph == 0)
@@ -2599,6 +2711,7 @@ rinex:
 #endif
 				}
 
+				readUBX(sbf, sbf4, sbf5);
 				ieph = -1;
 
 				for (i=neph-1; i>=0; i--)
@@ -2639,7 +2752,8 @@ rinex:
 				for (i=0; i<MAX_SAT; i++)
 					allocatedSat[i] = -1;
 
-				allocateChannel(chan, eph[ieph], ionoutc, grx, xyz[iumd], elvmask);
+				allocateChannel(chan, eph[ieph], ionoutc, grx, xyz[iumd], elvmask,
+						sbf, sbf4, sbf5);
 			}
 	
 			// Update navigation message
@@ -2673,7 +2787,8 @@ rinex:
 			}*/
 
 			// Update channel allocation
-			allocateChannel(chan, eph[ieph], ionoutc, grx, xyz[iumd], elvmask);
+			allocateChannel(chan, eph[ieph], ionoutc, grx, xyz[iumd], elvmask,
+					sbf, sbf4, sbf5);
 
 			// Show ditails about simulated channels
 			if (verb)

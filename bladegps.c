@@ -173,18 +173,19 @@ void *tx_task(void *arg)
 
 		if(!flag)
 		{
-			uhd_sensor_value_handle gpstime;
-			//int gps_time;
+			/*uhd_sensor_value_handle gpstime;
+			int gps_time;
 
 			s->status = uhd_sensor_value_make_from_bool(&gpstime, "temp", 0, "true", "false");
 			s->status = uhd_usrp_get_mboard_sensor(s->tx.usrp, "gps_time", 0, &gpstime);
 			//printf("%d\n", s->status);
 			s->status = uhd_sensor_value_to_int(gpstime, &full_secs); 
-			printf("gps_time = %d\n", full_secs);
+			printf("gps_time = %d\n", full_secs);*/
+			full_secs = time(NULL)+4;
 			s->status = uhd_usrp_set_time_next_pps(s->tx.usrp, full_secs + 1, 0, 0);
 			sleep(1);
 			full_secs++;
-			uhd_sensor_value_free(&gpstime);
+			//uhd_sensor_value_free(&gpstime);
 			flag = 1;
 		}
 		/*if(frac_secs == 0)
@@ -208,7 +209,8 @@ void *tx_task(void *arg)
 			full_secs += 1;
 		}
 
-		s->status = uhd_tx_metadata_make(&s->tx.md, true, full_secs+1, frac_secs, false, false);
+		//s->status = uhd_tx_metadata_make(&s->tx.md, true, full_secs+1, frac_secs, false, false);
+		s->status = uhd_tx_metadata_make(&s->tx.md, true, full_secs, frac_secs, false, false);
 		if (s->status != 0) {
 			fprintf(stderr, "Failed to create metadata\n");
 			goto out;
@@ -628,7 +630,7 @@ int main(int argc, char *argv[])
 		printf("TX VGA2 gain: %d dB\n", TX_VGA2);
 	}*/
 
-	double gain = 20;
+	double gain = 35;
 
 	s.status = uhd_usrp_set_tx_gain(s.tx.usrp, gain, 0, "");
 
@@ -693,14 +695,20 @@ int main(int argc, char *argv[])
 		goto out;
 	}
 	
-	s.status = uhd_usrp_set_time_source(s.tx.usrp, "gpsdo", 0);
-	s.status = uhd_usrp_set_clock_source(s.tx.usrp, "gpsdo", 0);
+	//s.status = uhd_usrp_set_time_source(s.tx.usrp, "gpsdo", 0);
+	s.status = uhd_usrp_set_time_source(s.tx.usrp, "external", 0);
 	if(s.status != 0) {
 		fprintf(stderr, "Failed to set time source\n");
 		goto out;
 	}
+	//s.status = uhd_usrp_set_clock_source(s.tx.usrp, "gpsdo", 0);
+	s.status = uhd_usrp_set_clock_source(s.tx.usrp, "external", 0);
+	if(s.status != 0) {
+		fprintf(stderr, "Failed to set clock source\n");
+		goto out;
+	}
 
-	uhd_sensor_value_handle sensor;
+	/*uhd_sensor_value_handle sensor;
 	char val_str[80];
 	char *pch, *ptrs[80];
 	int nums = 0;
@@ -730,7 +738,11 @@ int main(int argc, char *argv[])
 			
 	s.opt.llh[0] = lat / R2D; // convert to RAD
 	s.opt.llh[1] = lng / R2D; // convert to RAD
-	s.opt.llh[2] = hgt;
+	s.opt.llh[2] = hgt;*/
+
+	s.opt.llh[0] = 45.621599 / R2D;
+	s.opt.llh[1] = -73.379088 / R2D;
+	s.opt.llh[2] = 25;
 
 	// Start GPS task.
 	s.status = start_gps_task(&s);
