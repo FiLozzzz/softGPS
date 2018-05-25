@@ -57,7 +57,8 @@ void automation()
 					i++;
 			}
 			else if(i >= n)
-				break;
+				//break;
+				exit(1);
 		}
 		/*while(1)
 		{
@@ -512,9 +513,6 @@ int main(void)
 			case 6:
 				((int *)shm_addr)[0] = 0;
 				((int *)shm_addr)[4] = 0;
-				kill(pid3, SIGINT);
-				kill(pid3, SIGINT);
-				kill(pid3, SIGKILL);
 				break;
 			case 7:
 				printf("Status : %d\n", ((int *)shm_addr)[0]);
